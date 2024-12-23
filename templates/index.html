@@ -1,0 +1,399 @@
+<!-- templates/index.html -->
+<!doctype html>
+<html>
+
+<head>
+    <title>AI Chat</title>
+    <!-- 添加必要的脚本引用 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+
+    <!-- 前面的引入保持不变 -->
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #chat-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #chat-history {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            padding: 20px;
+            background-color: #ffffff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+
+        #input-area {
+            position: relative;
+            display: flex;
+            gap: 10px;
+            background-color: #ffffff;
+            padding: 10px;
+            border-top: 1px solid #eee;
+            height: auto;
+            min-height: fit-content;
+        }
+
+        #user-input {
+            flex-grow: 1;
+            height: 72px;
+            /* 基于行高24px的3行高度 */
+            max-height: 72px;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 16px;
+            line-height: 24px;
+            resize: none;
+            overflow-y: auto;
+        }
+
+        button {
+            padding: 10px 20px;
+            height: 72px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            min-width: 80px;
+        }
+
+        /* 其他样式保持不变 */
+
+        /* 移动设备适配 */
+        @media (max-width: 768px) {
+            #chat-container {
+                padding: 10px;
+            }
+
+            #user-input {
+                font-size: 16px;
+            }
+
+            button {
+                padding: 8px 15px;
+                min-width: 60px;
+            }
+        }
+
+        /* 美化滚动条 */
+        #user-input::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #user-input::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        #user-input::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        #user-input::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* 添加消息样式 */
+        .message {
+            margin: 8px 0;
+            padding: 10px;
+            border-radius: 8px;
+            line-height: 1.5;
+            font-size: 16px;
+        }
+
+        /* 代码块容器样式 */
+        .code-container {
+            position: relative;
+            margin: 8px 0;
+        }
+
+        /* 复制按钮样式 */
+        .copy-button {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            padding: 2px 8px;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            opacity: 0.8;
+            z-index: 10;
+            height: 20px;
+            line-height: 16px;
+        }
+
+        /* 调整代码块样式 */
+        .code-container pre {
+            margin: 0;
+            padding-top: 28px !important;
+        }
+
+        .copy-button:hover {
+            opacity: 1;
+            background-color: #e0e0e0;
+        }
+
+        /* 调整代码块样式 */
+        .message pre {
+            margin: 4px 0;
+            /* 减小代码块间距 */
+            padding: 8px;
+            /* 减小代码块内间距 */
+            padding-top: 24px;
+            /* 为复制按钮留出空间 */
+        }
+
+        .user-message {
+            background-color: #e3f2fd;
+            margin-left: 20%;
+        }
+
+        .ai-message {
+            background-color: #f8f9fa;
+            margin-right: 20%;
+        }
+
+        /* Markdown 样式 */
+        .message pre {
+            background-color: #f6f8fa;
+            padding: 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .message pre code {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+            font-size: 14px;
+            line-height: 1.4;
+            tab-size: 4;
+        }
+
+        /* 语言标签样式 */
+        .code-container::before {
+            content: attr(data-language);
+            position: absolute;
+            top: 2px;
+            left: 8px;
+            font-size: 12px;
+            color: #666;
+            z-index: 10;
+        }
+
+        .message code {
+            font-family: "Courier New", Courier, monospace;
+            padding: 2px 4px;
+            background-color: rgba(27, 31, 35, 0.05);
+            border-radius: 3px;
+        }
+
+        .message img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .message table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 15px 0;
+        }
+
+        .message th,
+        .message td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .message th {
+            background-color: #f6f8fa;
+        }
+
+        .message blockquote {
+            border-left: 4px solid #ddd;
+            margin: 0;
+            padding-left: 15px;
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chat-container">
+        <div id="chat-history"></div>
+
+        <div id="input-area">
+            <textarea id="user-input" placeholder="Type your message... (Markdown supported)"></textarea>
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        function addMessage(text, sender) {
+            const chatHistory = document.getElementById("chat-history");
+            const messageDiv = document.createElement("div");
+            messageDiv.className = `message ${sender === "user" ? "user-message" : "ai-message"
+                }`;
+
+            // 使用marked渲染markdown
+            messageDiv.innerHTML = marked.parse(text);
+
+            // 为所有代码块添加复制按钮和语言标签
+            messageDiv.querySelectorAll('pre code').forEach(codeBlock => {
+                const pre = codeBlock.parentElement;
+                const container = document.createElement('div');
+                container.className = 'code-container';
+
+                // 获取编程语言
+                const language = codeBlock.className.replace('language-', '');
+                if (language) {
+                    container.setAttribute('data-language', language);
+                }
+
+                // 将pre元素包装在container中
+                pre.parentNode.insertBefore(container, pre);
+                container.appendChild(pre);
+
+                // 添加复制按钮
+                const copyButton = createCopyButton(codeBlock);
+                container.appendChild(copyButton);
+
+                // 应用语法高亮
+                hljs.highlightElement(codeBlock);
+            });
+
+            chatHistory.appendChild(messageDiv);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        // 添加复制代码功能
+        function createCopyButton(codeElement) {
+            const button = document.createElement('button');
+            button.className = 'copy-button';
+            button.textContent = '复制';
+
+            button.addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(codeElement.textContent);
+                    button.textContent = '已复制!';
+                    setTimeout(() => {
+                        button.textContent = '复制';
+                    }, 2000);
+                } catch (err) {
+                    console.error('复制失败:', err);
+                    button.textContent = '复制失败';
+                }
+            });
+
+            return button;
+        }
+
+        // 配置 marked
+        marked.setOptions({
+            highlight: function (code, language) {
+                if (language && hljs.getLanguage(language)) {
+                    return hljs.highlight(code, { language: language }).value;
+                }
+                return hljs.highlightAuto(code).value;
+            },
+            breaks: true,
+            gfm: true,
+        });
+
+        function sendMessage() {
+            const input = document.getElementById("user-input");
+            const message = input.value.trim();
+            const button = document.querySelector("button");
+
+            if (!message) return;
+
+            // 禁用按钮和输入框，显示加载状态
+            button.disabled = true;
+            input.disabled = true;
+            button.textContent = "Sending...";
+
+            addMessage(message, "user");
+            input.value = "";
+
+            fetch("/chat", {
+                method: "POST",
+                body: message,
+            })
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error("Network response was not ok");
+                    }
+                    return response.text();
+                })
+                .then((result) => {
+                    addMessage(result, "ai");
+                })
+                .catch((error) => {
+                    console.error("Error:", error);
+                    addMessage(
+                        "Error getting response from AI. Please try again.",
+                        "ai",
+                    );
+                })
+                .finally(() => {
+                    // 恢复按钮和输入框状态
+                    button.disabled = false;
+                    input.disabled = false;
+                    button.textContent = "Send";
+                    input.focus();
+                });
+        }
+
+        if (typeof marked === "undefined") {
+            console.error("Marked.js is not loaded!");
+        }
+
+        // 确保 highlight.js 已加载
+        if (typeof hljs === "undefined") {
+            console.error("Highlight.js is not loaded!");
+        }
+
+        // 添加键盘事件监听器
+        document
+            .getElementById("user-input")
+            .addEventListener("keydown", function (e) {
+                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+    </script>
+</body>
+
+</html>
+
+</html>
