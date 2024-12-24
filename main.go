@@ -12,7 +12,7 @@ import (
 
 const (
 	//Add your API key here
-	API_KEY = ""
+	API_KEY = "Your API key"
 	API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
 )
 
